@@ -35,6 +35,10 @@ def calc_R_mat(X, w):
     R = np.diag(np.array([y*(1 - y) for y in Y]))
     return R
 
+'''
+Trains the model for logistic regression using
+the iterative reweighted least square methods (source: Bishop's book)
+'''
 def train(X, t):
     X = np.hstack((np.ones(X.shape[0], 1), X))
     M = X.shape[1]
@@ -52,3 +56,8 @@ def train(X, t):
         aux2 = np.linalg.inv(aux2)
         w = np.dot(aux2, np.dot(aux1, z))
     return w
+
+def predict(w, X):
+    Y = np.array([sigmoid(np.dot(x, w)) for x in X])
+    Y = np.array([y >= (1 - y) for y in Y]).astype(int)
+    return Y
