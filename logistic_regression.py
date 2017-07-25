@@ -40,7 +40,7 @@ Trains the model for logistic regression using
 the iterative reweighted least square methods (source: Bishop's book)
 '''
 def train(X, t):
-    X = np.hstack((np.ones(X.shape[0], 1), X))
+    X = np.hstack((np.ones((X.shape[0], 1)), X))
     M = X.shape[1]
     w = np.zeros(M)
 
