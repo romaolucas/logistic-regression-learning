@@ -28,7 +28,9 @@ def err_func(X, w, t):
 
 def err_grad(X, w, t):
     y = np.array([sigmoid(np.dot(x, w)) for x in X])
-    return np.dot(X, (y - t))
+    grad = np.dot(X.T, (y - t))
+    print("grad = ", grad)
+    return grad 
 
 def calc_R_mat(X, w):
     Y = np.array([sigmoid(np.dot(x, w)) for x in X])
@@ -44,7 +46,7 @@ def train(X, t):
     M = X.shape[1]
     w = np.zeros(M)
 
-    while err_grad(X, w, t) != 0:
+    while not np.array_equal(err_grad(X, w, t), np.zeros(M)):
         R = calc_R_mat(X, w)
         R_inv = np.linalg.inv(R)
         Y = np.array([sigmoid(np.dot(x, w)) for x in X])
@@ -58,6 +60,36 @@ def train(X, t):
     return w
 
 def predict(w, X):
+    X = np.hstack((np.ones((X.shape[0], 1)), X))
     Y = np.array([sigmoid(np.dot(x, w)) for x in X])
     Y = np.array([y >= (1 - y) for y in Y]).astype(int)
     return Y
+
+def calc_accuracy(Y, T):
+    correctly_classified = 0
+    for y, t in zip(Y, T):
+        if y == t:
+            correctly_classified += 1
+    return correctly_classified / Y.shape[0]
+
+X = []
+t = []
+import csv
+with open('clean2.data', mode='r') as csvfile:
+    data_reader = csv.reader(csvfile, delimiter=',')
+    for row in data_reader:
+        X.append(row[0:166])
+        t.append(row[-1])
+
+X = np.array(X, dtype=float)
+t = np.array(t, dtype=float)
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, t_train, t_test = train_test_split(X, t, test_size=0.33)
+
+w = train(X_train, t_train)
+print("Convergiu com w: ", w)
+print("Prevendo dados de teste\n")
+Y = predict(w, X_test)
+for i in range(0, 20):
+    print("Y[{}] = {}, t[{}] = {}".format(i, Y[i], i, t_test[i]))
