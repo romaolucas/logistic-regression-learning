@@ -5,73 +5,76 @@ This module trains a given dataset (X, t) using logistic regression.
 
 import numpy as np
 
+class LogRegClassifier:
 
-'''
-calculates sigmoid for given value in R
-'''
-def sigmoid(a):
-    return 1./( 1 + np.exp(-a))
+    def __init__(self, X, t, thres=10**-4):
+        self.X = X
+        self.t = t
+        self.thres = thres
+        self.w = np.zeros(X.shape[1] + 1)
+
+    '''
+    calculates sigmoid for given value in R
+    '''
+    def sigmoid(self, a):
+        return 1./( 1 + np.exp(-a))
 
 
-'''
-calculates error function given by the formula:
-    - sum_{i = 1}^{N} [t_n ln(y_n) + (1 - t_n)ln(1 - y_n)]
-'''
-def err_func(X, w, t):
-    N = X.shape[0]
-    err = 0
-    for i in range(0, N):
-        y = sigmoid(np.dot(X[i].T, w))
-        err = err + (t[i]*np.log(y) + (1 - t[i])*np.log(1 - y))
-    err = err * - 1.0
-    return err
+    '''
+    calculates error function given by the formula:
+        - sum_{i = 1}^{N} [t_n ln(y_n) + (1 - t_n)ln(1 - y_n)]
+    '''
+    def err_func(self):
+        N = self.X.shape[0]
+        err = 0
+        for i in range(0, N):
+            y = self.sigmoid(np.dot(self.X[i].T, self.w))
+            err = err + (self.t[i]*np.log(y) + (1 - self.t[i])*np.log(1 - y))
+        err = err * - 1.0
+        return err
 
-def err_grad(X, w, t):
-    y = np.array([sigmoid(np.dot(x, w)) for x in X])
-    grad = np.dot(X.T, (y - t))
-    return grad 
+    def err_grad(self):
+        y = np.array([self.sigmoid(np.dot(x, self.w)) for x in self.X])
+        grad = np.dot(self.X.T, (y - self.t))
+        return grad 
 
-def calc_R_mat(X, w):
-    Y = np.array([sigmoid(np.dot(x.T, w)) for x in X])
-    R = np.diag(np.array([y*(1 - y) for y in Y]))
-    return R
+    def calc_R_mat(self):
+        Y = np.array([self.sigmoid(np.dot(x.T, self.w)) for x in self.X])
+        R = np.diag(np.array([y*(1 - y) for y in Y]))
+        return R
 
-'''
-Trains the model for logistic regression using
-the iterative reweighted least square methods (source: Bishop's book)
-'''
-def train(X, t):
-    X = np.hstack((np.ones((X.shape[0], 1)), X))
-    M = X.shape[1]
-    w = np.zeros(M)
-    iterations = 0
-    converged = False
-    err = err_func(X, w, t)
-    thres = 10**-4
-    while not converged:
-        R = calc_R_mat(X, w)
-        R_inv = np.linalg.inv(R)
-        Y = np.array([sigmoid(np.dot(x, w)) for x in X])
-        z = np.dot(X, w) - np.dot(R_inv, (Y - t))
-        # update w using the formula
-        # w = (X'RX)^-1*X'Rz
-        aux1 = np.matmul(X.T, R)
-        aux2 = np.matmul(aux1, X)
-        aux2 = np.linalg.inv(aux2)
-        w = np.dot(aux2, np.dot(aux1, z))
-        updated_err = err_func(X, w, t)
-        print("err = {}, updated_err = {}, err - updated_err = {}".format(err, updated_err, err - updated_err))
-        converged = (err - updated_err) < thres
-        err = updated_err
-        iterations += 1
-    print("Convergiu apos {} iteracoes".format(iterations))
-    return w
+    '''
+    Trains the model for logistic regression using
+    the iterative reweighted least square methods (source: Bishop's book)
+    '''
+    def train(self):
+        self.X = np.hstack((np.ones((self.X.shape[0], 1)), self.X))
+        iterations = 0
+        converged = False
+        err = self.err_func()
+        while not converged:
+            R = self.calc_R_mat()
+            R_inv = np.linalg.inv(R)
+            Y = np.array([self.sigmoid(np.dot(x, self.w)) for x in self.X])
+            z = np.dot(self.X, self.w) - np.dot(R_inv, (Y - self.t))
+            # update w using the formula
+            # w = (X'RX)^-1*X'Rz
+            aux1 = np.matmul(self.X.T, R)
+            aux2 = np.matmul(aux1, self.X)
+            aux2 = np.linalg.inv(aux2)
+            self.w = np.dot(aux2, np.dot(aux1, z))
+            updated_err = self.err_func()
+            print("err = {}, updated_err = {}, err - updated_err = {}".format(err, updated_err, err - updated_err))
+            converged = (err - updated_err) < self.thres
+            err = updated_err
+            iterations += 1
+        print("Convergiu apos {} iteracoes".format(iterations))
 
-def predict(w, X):
-    X = np.hstack((np.ones((X.shape[0], 1)), X))
-    Y = np.array([sigmoid(np.dot(x, w)) for x in X])
-    Y = np.array([y >= (1 - y) for y in Y]).astype(int)
-    return Y
+    def predict(self, X):
+        X = np.hstack((np.ones((X.shape[0], 1)), X))
+        Y = np.array([self.sigmoid(np.dot(x, self.w)) for x in X])
+        Y = np.array([y >= (1 - y) for y in Y]).astype(int)
+        return Y
 
 def calc_accuracy(Y, T):
     correctly_classified = 0
@@ -95,7 +98,9 @@ t = np.array(t, dtype=float)
 from sklearn.model_selection import train_test_split
 X_train, X_test, t_train, t_test = train_test_split(X, t, test_size=0.33)
 
-w = train(X_train, t_train)
-print("Prevendo dados de teste\n")
-Y = predict(w, X_test)
+print("Treinando modelo")
+classifier = LogRegClassifier(X_train, t_train)
+classifier.train()
+print("Rodando no conjunto de teste")
+Y = classifier.predict(X_test)
 print("Acuracia = ", calc_accuracy(Y, t_test))
