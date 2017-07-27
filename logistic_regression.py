@@ -10,7 +10,7 @@ import numpy as np
 calculates sigmoid for given value in R
 '''
 def sigmoid(a):
-    return 1 / 1 - np.exp(-a)
+    return 1./( 1 + np.exp(-a))
 
 
 '''
@@ -21,19 +21,18 @@ def err_func(X, w, t):
     N = X.shape[0]
     err = 0
     for i in range(0, N):
-        y = sigmoid(np.dot(X[i], w))
-        err = err + (t[i]*np.log(y) + (1 - t[i])*np.log(1 - sigmoid(y)))
+        y = sigmoid(np.dot(X[i].T, w))
+        err = err + (t[i]*np.log(y) + (1 - t[i])*np.log(1 - y))
     err = err * - 1.0
     return err
 
 def err_grad(X, w, t):
     y = np.array([sigmoid(np.dot(x, w)) for x in X])
     grad = np.dot(X.T, (y - t))
-    print("grad = ", grad)
     return grad 
 
 def calc_R_mat(X, w):
-    Y = np.array([sigmoid(np.dot(x, w)) for x in X])
+    Y = np.array([sigmoid(np.dot(x.T, w)) for x in X])
     R = np.diag(np.array([y*(1 - y) for y in Y]))
     return R
 
@@ -45,8 +44,11 @@ def train(X, t):
     X = np.hstack((np.ones((X.shape[0], 1)), X))
     M = X.shape[1]
     w = np.zeros(M)
-
-    while not np.array_equal(err_grad(X, w, t), np.zeros(M)):
+    iterations = 0
+    converged = False
+    err = err_func(X, w, t)
+    thres = 10**-4
+    while not converged:
         R = calc_R_mat(X, w)
         R_inv = np.linalg.inv(R)
         Y = np.array([sigmoid(np.dot(x, w)) for x in X])
@@ -57,6 +59,12 @@ def train(X, t):
         aux2 = np.matmul(aux1, X)
         aux2 = np.linalg.inv(aux2)
         w = np.dot(aux2, np.dot(aux1, z))
+        updated_err = err_func(X, w, t)
+        print("err = {}, updated_err = {}, err - updated_err = {}".format(err, updated_err, err - updated_err))
+        converged = (err - updated_err) < thres
+        err = updated_err
+        iterations += 1
+    print("Convergiu apos {} iteracoes".format(iterations))
     return w
 
 def predict(w, X):
@@ -88,8 +96,6 @@ from sklearn.model_selection import train_test_split
 X_train, X_test, t_train, t_test = train_test_split(X, t, test_size=0.33)
 
 w = train(X_train, t_train)
-print("Convergiu com w: ", w)
 print("Prevendo dados de teste\n")
 Y = predict(w, X_test)
-for i in range(0, 20):
-    print("Y[{}] = {}, t[{}] = {}".format(i, Y[i], i, t_test[i]))
+print("Acuracia = ", calc_accuracy(Y, t_test))
