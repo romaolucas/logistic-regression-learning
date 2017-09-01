@@ -28,7 +28,7 @@ class LogRegClassifier:
         N = self.X.shape[0]
         err = 0
         for i in range(0, N):
-            y = self.sigmoid(np.dot(self.X[i].T, self.w))
+            y = self.sigmoid(np.dot(self.w, self.X[i]))
             err = err + (self.t[i]*np.log(y) + (1 - self.t[i])*np.log(1 - y))
         err = err * - 1.0
         return err

@@ -50,8 +50,14 @@ class MultLogRegClassifier:
         return -err
 
     def err_grad(self):
-        return 0.0
+        Y = self.calculate_y(self.X)
+        return np.dot(self.X.T, (Y - T))
 
+    def hessian(self):
+        HT = np.zeros(self.M, self.K, self.M, self.K)
+        for i in range(0, self.K):
+            for j in range(0, self.K):
+                
             
         
 
