@@ -7,11 +7,11 @@ class MultLogRegClassifier:
         self.T = T
         self.thres = thres
         n, k = T.shape
-        m = X.shape[1]
+        m = X.shape[1] + 1
         self.K = k
         self.M = m
         self.N = n
-        self.W = np.zeros((m + 1, k))
+        self.W = np.zeros((m, k))
 
 
     '''
@@ -51,15 +51,32 @@ class MultLogRegClassifier:
 
     def err_grad(self):
         Y = self.calculate_y(self.X)
-        return np.dot(self.X.T, (Y - T))
+        return np.dot(self.X.T, (Y - self.T))
 
     def hessian(self):
         HT = np.zeros(self.M, self.K, self.M, self.K)
+        Y = self.calculate_y(self.X)
         for i in range(0, self.K):
             for j in range(0, self.K):
-                
-            
+                r = np.multiply(Y[:, i], (int(i == j) - Y[:, j]))
+                HT[:, i, :, j] = np.dot(self.X.T * r, self.X)
+        return HT.reshape(self.M*self.K, self.M*self.K, order='F')
         
-
-
+    def train(self):
+        self.X = np.hstack((np.ones((self.X.shape[0], 1)), self.X))
+        iterations = 0
+        max_iterations = 200 
+        converged = False
+        err = self.err_func()
+        while not converged:
+            grad = self.err_grad()
+            H = self.hessian()
+            inv_H = np.linalg.inv(H)
+            aux_W = self.W.flatten(order='F')
+            aux_W = aux_W - np.dot(inv_H, grad.flatten(order='F'))
+            self.W = aux_W.reshape(self.M, self.K, order='F')
+            updated_err = self.err_func()
+            iterations += 1
+            converged = (err - updated_err) < self.thres or iterations > max_iterations
+        print("Convergiu apos {} iteracoes".format(iterations))
 
