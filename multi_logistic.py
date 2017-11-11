@@ -20,33 +20,31 @@ class MultLogRegClassifier:
 
 
     '''
-    computes the activation vector for a given x
-    '''
-    def activation_vec(self, x):
-        return np.dot(self.W.T, x)
-
-    '''
     calculates the softmax function for x at
     a given index k, k in 1..K
     '''
     def softmax(self, activations, k):
-        return np.exp(activations[k - 1]) / np.sum(np.apply_along_axis(np.exp, 0, activations))
+        numerator = np.exp(activations[k])
+        denominator = 0
+        for i in range(self.K):
+            denominator += np.exp(activations[i])
+        return numerator / denominator
 
     def calculate_y(self, X):
         Y = []
         N = X.shape[0]
         if N == 1:
-            activations = self.activation_vec(X)
+            activations = np.dot(self.W.T, X)
             return [self.softmax(activations, k) for k in range(1, self.K + 1)]
-        activations = np.array([self.activation_vec(x) for x in X])
-        for n, x in zip(range(0, N), X):
+        for n, x in enumerate(X):
             '''
             Ynk = softmax(activations[n], k)
                 = exp(activations[n][k -1] /
                 sum(exp(activations[n][j])
                 j = 0...K-1
             '''
-            Y.append([self.softmax(activations[n], k) for k in range(1, self.K + 1)]) 
+            A = np.dot(self.W.T, x)
+            Y.append([self.softmax(A, k) for k in range(self.K)]) 
         return Y
 
     def err_func(self):
@@ -59,7 +57,14 @@ class MultLogRegClassifier:
 
     def err_grad(self):
         Y = self.calculate_y(self.X)
-        return np.dot(self.X.T, (Y - self.T))
+        Y = np.array(Y)
+        T = np.array(self.T)
+        grad = np.zeros((self.M, self.K))
+        for k in range(self.K):
+            y_k = Y[:, k]
+            t_k = T[:, k]
+            grad[:, k] = np.dot(self.X.T, y_k - t_k)
+        return grad
 
     def hessian(self):
         HT = np.zeros((self.M, self.K, self.M, self.K))
@@ -83,13 +88,12 @@ class MultLogRegClassifier:
         while not converged:
             grad = self.err_grad()
             H = self.hessian()
-            inv_H = np.linalg.inv(H)
             aux_W = self.W.flatten(order='F')
-            aux_W = aux_W - np.dot(inv_H, grad.flatten(order='F'))
+            aux_W = aux_W - np.linalg.solve(H, grad.flatten(order='F'))
             self.W = aux_W.reshape(self.M, self.K, order='F')
             updated_err = self.err_func()
             print("err: {}, updated err: {}, err - updated_err: {}".format(err, updated_err, err - updated_err))
-            converged = (err - updated_err) < self.thres or iterations > max_iterations
+            converged = np.absolute(err - updated_err) < self.thres or iterations > max_iterations
             err = updated_err
             iterations += 1
         print("Convergiu apos {} iteracoes".format(iterations))
